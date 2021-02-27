@@ -17,6 +17,7 @@ POI = json.loads(os.environ['POI'])
 OT_LAST_URL = os.environ['OT_LAST_URL']
 PROMETHEUS_PORT = int(os.environ['PROMETHEUS_PORT'])
 OT_POLLING_DELAY = int(os.environ['OT_POLLING_DELAY'])
+OT_TID = os.environ['OT_TID']
 
 def haversine(point1, point2):
     """
@@ -41,9 +42,11 @@ def update():
     r = requests.get(OT_LAST_URL)
     last = r.json()
 
-    me = (last[0]['lat'], last[0]['lon'])
+    tracker  = list(filter(lambda x: x['tid'] == OT_TID, last))[0]
+    me = (tracker['lat'], tracker['lon'])
     for poi in POI:
         distance = haversine(me, POI[poi])
+        print("tracker '%s' is %f KM from POI '%s'" %(OT_TID, distance, poi))
         h.labels(poi).set(distance)
 
 start_http_server(int(PROMETHEUS_PORT))
