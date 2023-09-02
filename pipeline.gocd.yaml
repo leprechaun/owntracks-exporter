@@ -141,6 +141,7 @@ pipelines:
                       --label go-pipeline-job=${GO_JOB_NAME} \
                       --label org.opencontainers.image.source="https://github.com/leprechaun/owntracks-exporter" \
                       --build-arg APP_VERSION=${GO_PIPELINE_LABEL} \
+                      .
 
                     docker tag ${REGISTRY}/${IMAGE}:${GO_PIPELINE_LABEL} ${REGISTRY}/${IMAGE}:latest
                     docker push ${REGISTRY}/${IMAGE}:${GO_PIPELINE_LABEL}
