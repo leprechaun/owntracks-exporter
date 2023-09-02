@@ -80,3 +80,7 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+config:
+  env:
+    PROMETHEUS_PORT: 9100
