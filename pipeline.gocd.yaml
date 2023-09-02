@@ -76,8 +76,7 @@ pipelines:
         destination: ./
 
     environment_variables:
-      GO_AUTOMATION_USER: automaton
-      GITHUB_AUTOMATION_USER: gocd-service-account
+      CHART_NAME: owntracks-exporter
     secure_variables:
       NPM_TOKEN: "AES:zrPOXdWUAMyHo8N7EDQYPg==:BNjo2Pa0SkQMXurcJpVWE6VR+qLYzVP1TXTi7P91L+a4+Pmqoi6BlN3TdsLtT9eu"
       CC_TEST_REPORTER_ID: "AES:weNufwgbFfTeGGunxlVQnA==:2M+IAjaPjHZ2kVMLM2GNpLA49X1d5V5VGmqJxQaTvXAgkYtRUDZoBTiEAOTxr7s8ycnwsqiTtozlUs4J6Zutp93hfUbaRNAGVCTOFdp+wb4="
@@ -86,19 +85,15 @@ pipelines:
           jobs:
             tests:
                 tasks:
+                - *notify_running
                 - script: |
-                    exit 0
-#               - *notify_running
-#               - script: |
-#                   set -e
+                    set -e
 
-#                   ./auto/code-climate-reporter before-build
-#                   ./auto/test --verbose --coverage
-#                   ./auto/code-climate-reporter after-build
-#               - *notify_failure
-#               - *notify_success
-#               - *chown
-#               - *cleanup
+                    helm lint ./helm-charts/${CHART_NAME}
+                - *notify_failure
+                - *notify_success
+                - *chown
+                - *cleanup
 
   owntracks-prometheus-exporter-build:
     group: owntracks-prometheus-exporter
@@ -160,7 +155,6 @@ pipelines:
 
                     helm lint helm-charts/${CHART_NAME}
                     helm package --version "${CHART_VERSION}" --app-version $GO_PIPELINE_LABEL ./helm-charts/${CHART_NAME}
-                    helm push ${CHART_NAME}-${CHART_VERSION}.tgz oci://ghcr.io/snacker-tracker/charts
                 - *notify_failure
                 - *notify_success
                 - *chown
