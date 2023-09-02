@@ -1,0 +1,173 @@
+format_version: 2
+common:
+  tasks:
+    notify-failure: &notify_failure
+      plugin:
+        run_if: failed
+        options:
+          script: |
+            echo -- Failed
+            github-commit-status \
+              leprechaun/owntracks-prometheus-exporter \
+              ${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_BRANCH_LABEL-${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_LABEL}} \
+              "failure" "Task Failed"
+        configuration:
+          id: script-executor
+          version: 1
+
+    notify-success: &notify_success
+      plugin:
+        run_if: passed
+        options:
+          script: |
+            echo -- Passed
+            github-commit-status \
+              leprechaun/owntracks-prometheus-exporter \
+              ${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_BRANCH_LABEL-${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_LABEL}} \
+              "success" "Task Succeeded"
+        configuration:
+          id: script-executor
+          version: 1
+
+    notify-running: &notify_running
+      script: |
+        echo -- Running
+        github-commit-status \
+          leprechaun/owntracks-prometheus-exporter \
+          ${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_BRANCH_LABEL-${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_LABEL}} \
+          "pending" "Task is running"
+
+    cleanup: &cleanup
+      plugin:
+        run_if: any
+        options:
+          script: |
+            ./auto/clean-up || true
+        configuration:
+          id: script-executor
+          version: 1
+
+    chown: &chown
+      plugin:
+        run_if: any
+        options:
+          script: |
+            docker run -v `pwd`:/tmp/mount alpine chown -R $(id -u):$(id -g) /tmp/mount || true
+        configuration:
+          id: script-executor
+          version: 1
+
+pipelines:
+  owntracks-prometheus-exporter-test:
+    group: owntracks-prometheus-exporter
+    label_template: "${git-owntracks-prometheus-exporter[:8]}"
+    lock_behavior: unlockWhenFinished
+    timer:
+      spec: "* * * * * ? */15"
+      only_on_changes: yes
+    materials:
+      git-owntracks-prometheus-exporter:
+        plugin_configuration:
+          id: git.fb
+          version: 1.3.5
+        options:
+          url: https://github.com/leprechaun/owntracks-prometheus-exporter.git
+          branchwhitelist: master
+        destination: ./
+
+    environment_variables:
+      GO_AUTOMATION_USER: automaton
+      GITHUB_AUTOMATION_USER: gocd-service-account
+    secure_variables:
+      NPM_TOKEN: "AES:zrPOXdWUAMyHo8N7EDQYPg==:BNjo2Pa0SkQMXurcJpVWE6VR+qLYzVP1TXTi7P91L+a4+Pmqoi6BlN3TdsLtT9eu"
+      CC_TEST_REPORTER_ID: "AES:weNufwgbFfTeGGunxlVQnA==:2M+IAjaPjHZ2kVMLM2GNpLA49X1d5V5VGmqJxQaTvXAgkYtRUDZoBTiEAOTxr7s8ycnwsqiTtozlUs4J6Zutp93hfUbaRNAGVCTOFdp+wb4="
+    stages:
+      - tests:
+          jobs:
+            tests:
+                tasks:
+                - script: |
+                    exit 0
+#               - *notify_running
+#               - script: |
+#                   set -e
+
+#                   ./auto/code-climate-reporter before-build
+#                   ./auto/test --verbose --coverage
+#                   ./auto/code-climate-reporter after-build
+#               - *notify_failure
+#               - *notify_success
+#               - *chown
+#               - *cleanup
+
+  owntracks-prometheus-exporter-build:
+    group: owntracks-prometheus-exporter
+    label_template: "0.1.${COUNT}-${upstream}"
+    lock_behavior: unlockWhenFinished
+    materials:
+      upstream:
+        pipeline: owntracks-prometheus-exporter-test
+        stage: tests
+      git-owntracks-prometheus-exporter:
+        plugin_configuration:
+          id: git.fb
+          version: 1.3.5
+        options:
+          url: https://github.com/leprechaun/owntracks-prometheus-exporter.git
+          branchwhitelist: master
+        destination: ./
+
+    environment_variables:
+      REGISTRY: ghcr.io
+      IMAGE: leprechaun/owntracks-exporter
+      CHART_NAME: owntracks-exporter
+    secure_variables: {}
+    stages:
+      - package:
+          jobs:
+            build-image:
+              tasks:
+                - *notify_running
+                - script: |
+                    set -e
+
+                    docker build --pull -t ${REGISTRY}/${IMAGE}:${GO_PIPELINE_LABEL} \
+                      --label version=${GO_PIPELINE_LABEL} \
+                      --label git-commit=${GO_REVISION_GIT} \
+                      --label go-pipeline=${GO_PIPELINE_NAME} \
+                      --label go-pipeline-counter=${GO_PIPELINE_COUNTER} \
+                      --label go-pipeline-stage=${GO_STAGE_NAME} \
+                      --label go-pipeline-stage-counter=${GO_STAGE_COUNTER} \
+                      --label go-pipeline-job=${GO_JOB_NAME} \
+                      --label org.opencontainers.image.source="https://github.com/leprechaun/owntracks-exporter" \
+                      --build-arg APP_VERSION=${GO_PIPELINE_LABEL} \
+
+                    docker tag ${REGISTRY}/${IMAGE}:${GO_PIPELINE_LABEL} ${REGISTRY}/${IMAGE}:latest
+                    docker push ${REGISTRY}/${IMAGE}:${GO_PIPELINE_LABEL}
+                    docker push ${REGISTRY}/${IMAGE}:latest
+
+                - *notify_failure
+                - *notify_success
+                - *chown
+
+            package:
+              tasks:
+                - *notify_running
+                - script: |
+                    set -e
+                    export CHART_VERSION="$(echo $GO_PIPELINE_LABEL | awk -F '-' '{print $1}')"
+
+                    helm lint helm-charts/${CHART_NAME}
+                    helm package --version "${CHART_VERSION}" --app-version $GO_PIPELINE_LABEL ./helm-charts/${CHART_NAME}
+                    helm push ${CHART_NAME}-${CHART_VERSION}.tgz oci://ghcr.io/snacker-tracker/charts
+                - *notify_failure
+                - *notify_success
+                - *chown
+
+              artifacts:
+                - build:
+                    source: owntracks-exporter-*.tgz
+                    destination: ./chart/
+                - build:
+                    source: helm-charts/values/*
+                    destination: ./chart/
