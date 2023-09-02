@@ -116,7 +116,8 @@ pipelines:
       REGISTRY: ghcr.io
       IMAGE: leprechaun/owntracks-exporter
       CHART_NAME: owntracks-exporter
-    secure_variables: {}
+    secure_variables:
+      GITHUB_TOKEN: AES:/zsyBzdG0/oKWsMrct1OcA==:j2YaUraAIECGf/HCxG0RO137o50NDWLFUMWnLCFrKFgV0iVcKDQihC8OW++3BliELLEcFapSo72dy5HzWkvW1pFBFXgjASmr1n4AeMWz5H0m9agCQs9qfzDdIonh+EnM
     stages:
       - package:
           jobs:
