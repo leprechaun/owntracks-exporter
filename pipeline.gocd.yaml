@@ -8,8 +8,8 @@ common:
           script: |
             echo -- Failed
             github-commit-status \
-              leprechaun/owntracks-prometheus-exporter \
-              ${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_BRANCH_LABEL-${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_LABEL}} \
+              leprechaun/owntracks-exporter \
+              ${GO_SCM_GIT_OWNTRACKS_PROMETHEUS_EXPORTER_BRANCH_LABEL-${GO_SCM_GIT_OWNTRACKS_PROMETHEUS_EXPORTER_LABEL} \
               "failure" "Task Failed"
         configuration:
           id: script-executor
@@ -22,8 +22,8 @@ common:
           script: |
             echo -- Passed
             github-commit-status \
-              leprechaun/owntracks-prometheus-exporter \
-              ${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_BRANCH_LABEL-${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_LABEL}} \
+              leprechaun/owntracks-exporter \
+              ${GO_SCM_GIT_OWNTRACKS_PROMETHEUS_EXPORTER_BRANCH_LABEL-${GO_SCM_GIT_OWNTRACKS_PROMETHEUS_EXPORTER_LABEL} \
               "success" "Task Succeeded"
         configuration:
           id: script-executor
@@ -33,8 +33,8 @@ common:
       script: |
         echo -- Running
         github-commit-status \
-          leprechaun/owntracks-prometheus-exporter \
-          ${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_BRANCH_LABEL-${GO_SCM_GIT_ANALYTICS_SDK_GENERATOR_LABEL}} \
+          leprechaun/owntracks-exporter \
+          ${GO_SCM_GIT_OWNTRACKS_PROMETHEUS_EXPORTER_BRANCH_LABEL-${GO_SCM_GIT_OWNTRACKS_PROMETHEUS_EXPORTER_LABEL} \
           "pending" "Task is running"
 
     cleanup: &cleanup
