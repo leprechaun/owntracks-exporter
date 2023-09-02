@@ -155,6 +155,8 @@ pipelines:
 
                     helm lint helm-charts/${CHART_NAME}
                     helm package --version "${CHART_VERSION}" --app-version $GO_PIPELINE_LABEL ./helm-charts/${CHART_NAME}
+
+                    bash ./upload-chart.sh owntracks-exporter-*.tgz
                 - *notify_failure
                 - *notify_success
                 - *chown
