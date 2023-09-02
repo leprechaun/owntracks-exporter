@@ -163,6 +163,6 @@ pipelines:
                 - build:
                     source: owntracks-exporter-*.tgz
                     destination: ./chart/
-                - build:
-                    source: helm-charts/values/*
-                    destination: ./chart/
+#               - build:
+#                   source: helm-charts/values/*
+#                   destination: ./chart/
